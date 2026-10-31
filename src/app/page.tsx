@@ -18,7 +18,7 @@ export default function Home() {
 
         <div className="rounded-2xl border border-slate-700 bg-slate-900 p-8 text-left shadow-xl">
           <h2 className="mb-4 text-2xl font-semibold">
-            Application Dashboard
+            OpenAsset Management Dashboard
           </h2>
 
           <p className="mb-6 text-slate-400">
