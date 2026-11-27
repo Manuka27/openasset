@@ -6,7 +6,7 @@ Steps 79–80 · Deployment audit and preparation on 2026-11-27
 
 | Area | Finding |
 | --- | --- |
-| Git and GitHub | `feature/dashboard-data` and the local `origin/main` reference both point to `c2f4d18`. The index is empty. The application, deployment configuration, and reviewed migrations are still in the working tree. Railway deploys a GitHub commit, so review and publish the finished source first. |
+| Git and GitHub | The application release is on `feature/dashboard-data` in PR #2 into `main`. The CI workflow should pass on the PR before merging an approved commit for Railway. |
 | Next.js | Next.js 16.4.6 uses `next build` and `next start`. Cache Components, partial prefetching and the Tailwind Turbopack loader are configured. Step 80 passed a production build without database or auth credentials, a start check on an assigned `PORT`, and all 12 tests on disposable PostgreSQL. Railway is the next environment to verify. |
 | Prisma | Prisma 7.10.1 generates into the Git-ignored `src/generated/prisma`. Both `npm run dev` and `npm run build` generate it before compiling. The two reviewed migrations create the application schema and add employee and assignment lifecycle fields and indexes. |
 | PostgreSQL | The app uses Prisma's PostgreSQL adapter. Railway web and migration processes need a reachable database with the migrated `public` schema. WSL's Compose service and loopback URL are for local development. |
@@ -30,6 +30,10 @@ Think of GitHub as the versioned solution, Railway as the hosted app environment
   ```
 
 - [ ] Push the reviewed branch with `git push -u origin feature/dashboard-data`. Open a pull request into `main` and review the file list and checks. After approval, merge the PR and note the commit SHA Railway should deploy. A separate reviewed branch can serve as a staging deployment source.
+
+### CI on pull requests
+
+The [CI workflow](../.github/workflows/ci.yml) runs for pull requests into `main` and pushes to `main` or `feature/**`. In PR #2, open **Checks** and wait for **CI / Checks** to pass before merging. The job uses Node.js 24, runs the clean install and build, then applies the reviewed migrations to a new PostgreSQL 17 service named `openasset_test`. It starts the app on the runner's loopback interface and runs the HTTP and database tests with disposable credentials. GitHub removes the service when the job ends. [GitHub PostgreSQL service containers](https://docs.github.com/en/actions/tutorials/use-containerized-services/create-postgresql-service-containers)
 
 ## 3. Create the Railway services after approval
 
@@ -77,6 +81,6 @@ The build generates code from the schema. The pre-deploy command applies the che
 
 - [ ] In the PostgreSQL service **Backups** tab, enable a schedule appropriate to how much recent data you can afford to lose. Verify the plan and retention before relying on it. Take a manual backup before risky migrations. For an independent copy, use `pg_dump --format=custom` from an authorized client with private connectivity and credentials. Store it encrypted outside Git and verify a restore into a separate database. The verified WSL backup covers the local database. Railway needs its own backups. [Railway volume backups](https://docs.railway.com/volumes/backups) · [Point-in-time recovery](https://docs.railway.com/volumes/point-in-time-recovery)
 - [ ] Rehearse restoring to a separate environment, check record counts and migration history, then test sign-in and core workflows. A Railway app rollback changes the deployed app version. PostgreSQL schema and records need a separate recovery plan. Prefer compatible migrations so the previous app version can run while a release is repaired. [Railway rollback](https://docs.railway.com/deployments/deployment-actions)
-- [ ] For each update, open a feature branch and pull request, run the local checks from the README, then deploy the reviewed commit to staging. Review any new migration and the backup before production. With autodeploy disabled, use **Deploy Latest Commit** after approval. If you later enable autodeploy, select `main` and consider **Wait for CI** after adding a GitHub Actions workflow for pushes to `main`. Review deployment logs and repeat the smoke checks after each release. [Railway autodeploy and Wait for CI](https://docs.railway.com/deployments/github-autodeploys)
+- [ ] For each update, open a feature branch and pull request, run the local checks from the README, and confirm **CI / Checks** passes. Deploy the reviewed commit to staging. Review any new migration and the backup before production. With autodeploy disabled, use **Deploy Latest Commit** after approval. If you later enable autodeploy, select `main` and enable **Wait for CI**. The workflow already runs on pushes to `main`. Review deployment logs and repeat the smoke checks after each release. [Railway autodeploy and Wait for CI](https://docs.railway.com/deployments/github-autodeploys)
 
-The next checkpoint is to review and commit the release locally after approval. A later staging deployment can verify the Railway image, private database connection, and hosted authentication before production.
+The next checkpoint is to review the CI run on PR #2 after the workflow is pushed with approval. A later staging deployment can verify the Railway image, private database connection, and hosted authentication before production.
