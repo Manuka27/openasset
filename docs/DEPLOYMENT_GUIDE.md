@@ -35,6 +35,10 @@ Think of GitHub as the versioned solution, Railway as the hosted app environment
 
 The [CI workflow](../.github/workflows/ci.yml) runs for pull requests into `main` and pushes to `main` or `feature/**`. In PR #2, open **Checks** and wait for **CI / Checks** to pass before merging. The job uses Node.js 24, runs the clean install and build, then applies the reviewed migrations to a new PostgreSQL 17 service named `openasset_test`. It starts the app on the runner's loopback interface and runs the HTTP and database tests with disposable credentials. GitHub removes the service when the job ends. [GitHub PostgreSQL service containers](https://docs.github.com/en/actions/tutorials/use-containerized-services/create-postgresql-service-containers)
 
+### Dependency security
+
+The npm override pins Effect to `3.22.1` only under `@prisma/config@7.10.1`. Prisma CLI, Client, and the PostgreSQL adapter remain at `7.10.1`. A clean install and the production-only audit verified that GHSA-7589-6fvf-x4pw is cleared, and both migrations and the 12-test suite passed with disposable PostgreSQL. Full `npm audit` still reports seven moderate entries in the development ESLint dependency tree, all linked to a `minimatch` advisory. Run both audits before release and review new or remaining findings. Remove the override when an aligned Prisma release includes patched Effect, then regenerate the lockfile and repeat the release checks. [Effect advisory](https://github.com/Effect-TS/effect/security/advisories/GHSA-7589-6fvf-x4pw) · [Prisma dependency issue](https://github.com/prisma/orm/issues/31125)
+
 ## 3. Create the Railway services after approval
 
 1. Sign in to Railway and connect GitHub. Grant the Railway GitHub integration access to `Manuka27/openasset`.

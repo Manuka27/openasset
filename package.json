@@ -35,5 +35,10 @@
     "eslint-config-next": "16.4.6",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "@prisma/config@7.10.1": {
+      "effect": "3.22.1"
+    }
   }
 }
