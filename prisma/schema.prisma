@@ -1,0 +1,188 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AssetStatus {
+  AVAILABLE
+  ISSUED
+  MAINTENANCE
+  ARCHIVED
+}
+
+enum ReturnCondition {
+  GOOD
+  NEEDS_SERVICE
+  DAMAGED
+}
+
+model User {
+  id               String       @id @default(cuid())
+  name             String
+  email            String       @unique
+  emailVerified    Boolean      @default(false)
+  image            String?
+  role             String       @default("staff")
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  accounts         Account[]
+  sessions         Session[]
+  issued           Assignment[] @relation("Issuer")
+  returned         Assignment[] @relation("Returner")
+  auditLogs        AuditLog[]
+}
+
+model Session {
+  id        String   @id
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String   @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+model RateLimit {
+  id          String @id @default(cuid())
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+}
+
+model Category {
+  id         String    @id @default(cuid())
+  name       String    @unique
+  archivedAt DateTime?
+  assets     Asset[]
+}
+
+model Location {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  archivedAt  DateTime?
+  assets      Asset[]
+  employees   Employee[]
+  assignments Assignment[]
+}
+
+model Employee {
+  id          String       @id @default(cuid())
+  employeeNumber String?   @unique
+  name        String
+  email       String       @unique
+  department  String?
+  archivedAt  DateTime?
+  locationId  String
+  location    Location     @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  assignments Assignment[]
+
+  @@index([locationId])
+}
+
+model Asset {
+  id             String       @id @default(cuid())
+  tag            String       @unique
+  name           String
+  brand          String?
+  model          String?
+  serialNumber   String?
+  purchaseDate   DateTime?    @db.Date
+  purchaseCost   Decimal?     @db.Decimal(12, 2)
+  warrantyExpiry DateTime?    @db.Date
+  status         AssetStatus  @default(AVAILABLE)
+  notes          String?
+  categoryId     String
+  category       Category     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  locationId     String
+  location       Location     @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  assignments    Assignment[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([categoryId])
+  @@index([locationId])
+  @@index([status])
+}
+
+model Assignment {
+  id                 String    @id @default(cuid())
+  assetId            String
+  asset              Asset     @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  employeeId         String
+  employee           Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  locationId         String
+  location           Location  @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  issuedById         String
+  issuedBy           User      @relation("Issuer", fields: [issuedById], references: [id], onDelete: Restrict)
+  returnedById       String?
+  returnedBy         User?     @relation("Returner", fields: [returnedById], references: [id], onDelete: Restrict)
+  issuedAt           DateTime  @default(now())
+  expectedReturnDate DateTime? @db.Date
+  returnedAt         DateTime?
+  returnCondition    ReturnCondition?
+  returnNotes        String?
+
+  @@index([assetId, issuedAt])
+  @@index([employeeId])
+  @@index([locationId])
+  @@index([issuedById])
+  @@index([returnedById])
+  @@index([issuedAt])
+  @@index([returnedAt, expectedReturnDate])
+  @@unique([assetId], map: "Assignment_one_open_per_asset_key", where: { returnedAt: null })
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  action     String
+  entity     String
+  entityId   String
+  details    Json
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
