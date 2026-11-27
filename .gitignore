@@ -39,3 +39,25 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# OpenAsset sample configuration and generated Prisma client
+!.env.example
+/src/generated/prisma/
+
+# Credentials, database exports, and local tool state
+/.aws/
+/.agents/
+/.codex/
+/backups/
+*.key
+*.p12
+*.pfx
+*.dump
+*.dump.*
+*.backup
+*.backup.*
+*.sql
+!/prisma/migrations/*/migration.sql
+*.sql.gz
+*.sql.bz2
+*.sql.xz
